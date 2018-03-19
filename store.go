@@ -116,6 +116,10 @@ func persistInbound(s Store, m packets.ControlPacket) {
 		}
 	case 1:
 		switch m.(type) {
+		case *packets.PubackPacket, *packets.SubackPacket, *packets.UnsubackPacket, *packets.PubcompPacket:
+			// Received a puback. delete matching publish
+			// from obound
+			s.Del(outboundKeyFromMID(m.Details().MessageID))
 		case *packets.PublishPacket, *packets.PubrelPacket:
 			// Received a publish. store it in ibound
 			// until puback sent
