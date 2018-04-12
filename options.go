@@ -64,6 +64,8 @@ type ClientOptions struct {
 	WriteTimeout            time.Duration
 	MessageChannelDepth     uint
 	ResumeSubs              bool
+	ResumeBurst             uint
+	ResumePauseDuration     time.Duration
 }
 
 // NewClientOptions will create a new ClientClientOptions type with some
@@ -102,6 +104,8 @@ func NewClientOptions() *ClientOptions {
 		WriteTimeout:            0, // 0 represents timeout disabled
 		MessageChannelDepth:     100,
 		ResumeSubs:              false,
+		ResumeBurst:             0,
+		ResumePauseDuration:     time.Minute,
 	}
 	return o
 }
@@ -124,6 +128,19 @@ func (o *ClientOptions) AddBroker(server string) *ClientOptions {
 // but not reconnecting if CleanSession is false. Otherwise these messages are discarded.
 func (o *ClientOptions) SetResumeSubs(resume bool) *ClientOptions {
 	o.ResumeSubs = resume
+	return o
+}
+
+// SetResumeBurst will set the number a packet to be resumed without pause.
+// If burst is set to 0, there is no limitation rate of resumed messages.
+func (o *ClientOptions) SetResumeBurst(burst uint) *ClientOptions {
+	o.ResumeBurst = burst
+	return o
+}
+
+// SetResumePauseDuration set the duration between two burst of resumed messages.
+func (o *ClientOptions) SetResumePauseDuration(d time.Duration) *ClientOptions {
+	o.ResumePauseDuration = d
 	return o
 }
 

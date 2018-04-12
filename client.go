@@ -609,7 +609,12 @@ func (c *client) SubscribeMultiple(filters map[string]byte, callback MessageHand
 func (c *client) resume(subscription bool) {
 
 	storedKeys := c.persist.All()
+	count := uint(0)
 	for _, key := range storedKeys {
+		if c.options.ResumeBurst == 0 && count > c.options.ResumeBurst {
+			time.Sleep(c.options.ResumePauseDuration)
+			count = 0
+		}
 		packet := c.persist.Get(key)
 		details := packet.Details()
 		if isKeyOutbound(key) {
@@ -619,17 +624,20 @@ func (c *client) resume(subscription bool) {
 					DEBUG.Println(STR, fmt.Sprintf("loaded pending subscribe (%d)", details.MessageID))
 					token := newToken(packets.Subscribe).(*SubscribeToken)
 					c.oboundP <- &PacketAndToken{p: packet, t: token}
+					count++
 				}
 			case *packets.UnsubscribePacket:
 				if subscription {
 					DEBUG.Println(STR, fmt.Sprintf("loaded pending unsubscribe (%d)", details.MessageID))
 					token := newToken(packets.Unsubscribe).(*UnsubscribeToken)
 					c.oboundP <- &PacketAndToken{p: packet, t: token}
+					count++
 				}
 			case *packets.PubrelPacket:
 				DEBUG.Println(STR, fmt.Sprintf("loaded pending pubrel (%d)", details.MessageID))
 				select {
 				case c.oboundP <- &PacketAndToken{p: packet, t: nil}:
+					count++
 				case <-c.stop:
 				}
 			case *packets.PublishPacket:
@@ -639,6 +647,7 @@ func (c *client) resume(subscription bool) {
 				DEBUG.Println(STR, fmt.Sprintf("loaded pending publish (%d)", details.MessageID))
 				DEBUG.Println(STR, details)
 				c.obound <- &PacketAndToken{p: packet, t: token}
+				count++
 			default:
 				ERROR.Println(STR, "invalid message type in store (discarded)")
 				c.persist.Del(key)
