@@ -289,7 +289,7 @@ func (c *client) Connect() Token {
 
 		// Take care of any messages in the store
 		if c.options.CleanSession == false {
-			c.resume(c.options.ResumeSubs)
+			go c.resume(c.options.ResumeSubs)
 		} else {
 			c.persist.Reset()
 		}
@@ -387,7 +387,7 @@ func (c *client) reconnect() {
 	go outgoing(c)
 	go incoming(c)
 
-	c.resume(false)
+	go c.resume(false)
 }
 
 // This function is only used for receiving a connack
@@ -509,7 +509,7 @@ func (c *client) Publish(topic string, qos byte, retained bool, payload interfac
 	token := newToken(packets.Publish).(*PublishToken)
 	DEBUG.Println(CLI, "enter Publish")
 	switch {
-	case !c.IsConnected():
+	case !c.IsConnected() && qos == 0:
 		token.err = ErrNotConnected
 		token.flowComplete()
 		return token
@@ -537,7 +537,7 @@ func (c *client) Publish(topic string, qos byte, retained bool, payload interfac
 		token.messageID = pub.MessageID
 	}
 	persistOutbound(c.persist, pub)
-	if c.connectionStatus() == reconnecting {
+	if c.connectionStatus() == reconnecting || !c.IsConnected() {
 		DEBUG.Println(CLI, "storing publish message (reconnecting), topic:", topic)
 	} else {
 		DEBUG.Println(CLI, "sending publish message, topic:", topic)
