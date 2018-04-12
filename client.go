@@ -611,7 +611,7 @@ func (c *client) resume(subscription bool) {
 	storedKeys := c.persist.All()
 	count := uint(0)
 	for _, key := range storedKeys {
-		if c.options.ResumeBurst == 0 && count > c.options.ResumeBurst {
+		if c.options.ResumeBurst > 0 && count > c.options.ResumeBurst {
 			time.Sleep(c.options.ResumePauseDuration)
 			count = 0
 		}
